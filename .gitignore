@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Secrets
+.env
+backend/.env
+
+# Uploads & model cache
+uploads/
+.insightface/
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+
+# IDE
+.vscode/
+.idea/
+.claude
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Scripts state
+backend/scripts/.matcher_state.json
+
+# Dev utility — not part of the project
+git_debug_home.py
