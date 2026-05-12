@@ -295,4 +295,4 @@ A native Windows MongoDB service holds the port. Either stop it (Admin PowerShel
 
 ## License
 
-MIT
+Apache License
