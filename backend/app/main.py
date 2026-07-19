@@ -65,6 +65,7 @@ _fastapi.add_middleware(
     allow_headers=["*"],
 )
 
+settings.uploads_dir.mkdir(parents=True, exist_ok=True)
 _fastapi.mount(
     "/uploads",
     StaticFiles(directory=str(settings.uploads_dir)),
@@ -81,7 +82,7 @@ _fastapi.include_router(detections.router, prefix="/api/detections", tags=["dete
 _fastapi.include_router(alerts.router,     prefix="/api/alerts",     tags=["alerts"])
 
 
-@_fastapi.get("/health", tags=["system"])
+@_fastapi.get("/api/health", tags=["system"])
 async def health():
     db = get_db()
     try:

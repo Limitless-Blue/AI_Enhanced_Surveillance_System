@@ -6,15 +6,27 @@ log = structlog.get_logger()
 DEFAULT_THRESHOLD = 0.45
 
 
+def _l2_normalize(vec: np.ndarray) -> np.ndarray:
+    """Return the unit-length version of a vector. Zero vectors pass through."""
+    vec = np.asarray(vec, dtype=np.float32)
+    n = float(np.linalg.norm(vec))
+    return vec / n if n > 0 else vec
+
+
 class FaceMatcher:
     """
     In-memory batch cosine-similarity matcher.
     Call load() once at startup (and after any enrollment).
     find_match() is a single numpy matmul — O(1) regardless of DB size.
+
+    All embeddings (enrolled and query) are L2-normalised on the way in, so
+    `matrix @ embedding` is a true cosine similarity in [-1, 1]. InsightFace's
+    raw `face.embedding` is NOT unit-length, so this normalisation is required
+    for the score thresholds below to be meaningful.
     """
 
     def __init__(self) -> None:
-        self._matrix: np.ndarray | None = None   # shape (N, 512)
+        self._matrix: np.ndarray | None = None   # shape (N, 512), unit rows
         self._persons: list[dict] = []
 
     @property
@@ -32,13 +44,13 @@ class FaceMatcher:
             log.info("matcher.loaded", count=0)
             return
 
-        embeddings = [np.array(p["embedding"], dtype=np.float32) for p in persons]
-        self._matrix = np.stack(embeddings)   # (N, 512)
+        embeddings = [_l2_normalize(p["embedding"]) for p in persons]
+        self._matrix = np.stack(embeddings)   # (N, 512), unit rows
         log.info("matcher.loaded", count=len(persons))
 
     def add(self, person: dict) -> None:
         """Hot-add a single enrolled person without full reload."""
-        emb = np.array(person["embedding"], dtype=np.float32).reshape(1, 512)
+        emb = _l2_normalize(person["embedding"]).reshape(1, 512)
         self._persons.append(person)
         if self._matrix is None:
             self._matrix = emb
@@ -57,8 +69,8 @@ class FaceMatcher:
         if self._matrix is None or len(self._persons) == 0:
             return None
 
-        # Cosine similarity = dot product (embeddings are L2-normalised)
-        scores: np.ndarray = self._matrix @ embedding  # (N,)
+        # Cosine similarity — both sides are L2-normalised.
+        scores: np.ndarray = self._matrix @ _l2_normalize(embedding)  # (N,)
         best_idx = int(np.argmax(scores))
         best_score = float(scores[best_idx])
 
@@ -82,7 +94,7 @@ class FaceMatcher:
         if self._matrix is None or len(self._persons) == 0:
             return []
 
-        scores: np.ndarray = self._matrix @ embedding
+        scores: np.ndarray = self._matrix @ _l2_normalize(embedding)
         indices = np.argsort(scores)[::-1][:top_k]
 
         results = []

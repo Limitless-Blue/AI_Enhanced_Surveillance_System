@@ -1,5 +1,6 @@
 """Shared helpers imported by all three Celery task modules."""
 from pymongo.database import Database
+from bson import ObjectId
 
 
 def _load_persons(db: Database) -> list[dict]:
@@ -26,14 +27,14 @@ def _handle_match(db, match, frame, *, source_type, source_id, location, setting
     from app.services.detection_service import save_detection_sync
     from app.services.alert_service import dispatch_all
     from pathlib import Path
-    import numpy as np
 
-    person = match.person if hasattr(match, "person") else None
-    # match is a MatchResult dataclass from pipeline; find full person doc
-    if person is None:
-        return None
-
-    person_doc = db.persons.find_one({"name": match.person_name})
+    # match is a MatchResult dataclass from the pipeline; resolve the full
+    # person document by name (prefer id when available).
+    person_doc = None
+    if getattr(match, "person_id", None) and ObjectId.is_valid(match.person_id):
+        person_doc = db.persons.find_one({"_id": ObjectId(match.person_id)})
+    if not person_doc:
+        person_doc = db.persons.find_one({"name": match.person_name})
     if not person_doc:
         return None
 
