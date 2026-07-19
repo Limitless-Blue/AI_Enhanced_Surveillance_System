@@ -41,7 +41,9 @@ class FaceEmbedder:
         if not faces:
             return None
         largest = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
-        return largest.embedding  # float32[512], L2-normalised by InsightFace
+        # float32[512] — RAW ArcFace embedding (NOT unit-length).
+        # FaceMatcher L2-normalises on input, so cosine similarity is correct there.
+        return largest.embedding
 
 
 _embedder: FaceEmbedder | None = None

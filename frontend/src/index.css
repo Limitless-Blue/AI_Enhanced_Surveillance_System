@@ -1,20 +1,271 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+@theme {
+  --color-mx-bg: #050a08;
+  --color-mx-bg-elev: #081210;
+  --color-mx-surface: #0c1916;
+  --color-mx-surface-2: #112520;
+  --color-mx-surface-3: #163029;
+  --color-mx-border: rgba(0, 255, 136, 0.12);
+  --color-mx-border-strong: rgba(0, 255, 136, 0.32);
+  --color-mx-border-active: rgba(0, 255, 136, 0.55);
+  --color-mx-grid: rgba(0, 255, 136, 0.04);
+
+  --color-mx-green-50: #d4ffe8;
+  --color-mx-green-100: #a8f5cd;
+  --color-mx-green-200: #6cdba0;
+  --color-mx-green-300: #2ee07a;
+  --color-mx-green-400: #00ff88;
+  --color-mx-green-500: #00d672;
+  --color-mx-green-600: #009955;
+  --color-mx-green-700: #1a8f5a;
+  --color-mx-green-800: #0a4a2e;
+  --color-mx-green-900: #052618;
+
+  --color-mx-text: #d4ffe8;
+  --color-mx-text-dim: #8ecdb0;
+  --color-mx-text-mute: #5a8775;
+  --color-mx-text-faint: #3a5a4d;
+
+  --color-mx-danger: #ff3050;
+  --color-mx-danger-glow: rgba(255, 48, 80, 0.4);
+  --color-mx-warn: #ffb84d;
+
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+html, body {
+  background: var(--color-mx-bg);
+  color: var(--color-mx-text);
+  font-family: 'Space Grotesk', system-ui, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
-  background: #0f1117;
-  color: #e2e8f0;
-  -webkit-font-smoothing: antialiased;
+  background-color: var(--color-mx-bg);
+  background-image:
+    radial-gradient(ellipse 70% 50% at 15% -10%, rgba(0, 255, 136, 0.08), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(0, 255, 136, 0.05), transparent 60%),
+    linear-gradient(rgba(0, 255, 136, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 56px 56px, 56px 56px;
+  background-position: 0 0, 0 0, -1px -1px, -1px -1px;
+  background-attachment: fixed;
 }
 
 #root {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
+}
+
+/* ------- Card surfaces (solid, not glassy) ------- */
+
+@utility card {
+  background-color: var(--color-mx-surface);
+  border: 1px solid var(--color-mx-border-strong);
+  border-radius: 10px;
+}
+@utility card-active {
+  background-color: var(--color-mx-surface-2);
+  border-color: var(--color-mx-border-active);
+}
+@utility card-glow {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 136, 0.12),
+    0 0 24px -8px rgba(0, 255, 136, 0.25),
+    inset 0 1px 0 0 rgba(0, 255, 136, 0.08);
+}
+@utility card-glow-strong {
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 136, 0.4),
+    0 0 32px -4px rgba(0, 255, 136, 0.45),
+    inset 0 1px 0 0 rgba(0, 255, 136, 0.15);
+}
+@utility card-glow-danger {
+  box-shadow:
+    0 0 0 1px rgba(255, 48, 80, 0.35),
+    0 0 24px -6px rgba(255, 48, 80, 0.4),
+    inset 0 1px 0 0 rgba(255, 48, 80, 0.12);
+}
+
+/* ------- Liquid glass ------- */
+
+@utility glass {
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0.025) 42%,
+      rgba(0, 255, 136, 0.05) 100%);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.25),
+    0 8px 28px -10px rgba(0, 0, 0, 0.55);
+}
+
+@utility glass-green {
+  background:
+    linear-gradient(135deg,
+      rgba(0, 255, 136, 0.18) 0%,
+      rgba(0, 255, 136, 0.05) 50%,
+      rgba(0, 255, 136, 0.12) 100%);
+  backdrop-filter: blur(14px) saturate(1.7);
+  -webkit-backdrop-filter: blur(14px) saturate(1.7);
+  border: 1px solid rgba(0, 255, 136, 0.30);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.28),
+    inset 0 0 22px rgba(0, 255, 136, 0.10),
+    0 6px 22px -8px rgba(0, 255, 136, 0.35);
+}
+
+/* Glossy specular highlight — a bright sheen on the top edge */
+.glass-specular {
+  position: relative;
+  overflow: hidden;
+}
+.glass-specular::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 45%;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(255, 255, 255, 0.05) 55%,
+    transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Subtle top accent bar (replaces corner brackets) */
+.card-accent-bar {
+  position: absolute;
+  top: -1px;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--color-mx-green-400) 30%,
+    var(--color-mx-green-400) 70%,
+    transparent 100%);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+  pointer-events: none;
+}
+
+/* ------- Text utilities ------- */
+
+@utility text-glow {
+  text-shadow: 0 0 8px rgba(0, 255, 136, 0.5), 0 0 16px rgba(0, 255, 136, 0.25);
+}
+@utility text-glow-soft {
+  text-shadow: 0 0 6px rgba(0, 255, 136, 0.35);
+}
+@utility text-glow-danger {
+  text-shadow: 0 0 8px rgba(255, 48, 80, 0.55), 0 0 16px rgba(255, 48, 80, 0.25);
+}
+
+/* ------- Sidebar nav active state ------- */
+@utility nav-active {
+  background:
+    linear-gradient(90deg, rgba(0, 255, 136, 0.14), rgba(0, 255, 136, 0.02));
+  border-left: 2px solid var(--color-mx-green-400);
+  box-shadow: inset 0 0 24px rgba(0, 255, 136, 0.04);
+}
+
+/* ------- Animations ------- */
+
+@keyframes mx-scan {
+  0%   { transform: translateY(-20%); opacity: 0; }
+  10%  { opacity: 0.8; }
+  90%  { opacity: 0.8; }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+.mx-scan-line {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.mx-scan-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(0, 255, 136, 0.14) 50%,
+    transparent 100%);
+  filter: blur(3px);
+  animation: mx-scan 5s linear infinite;
+}
+
+@keyframes mx-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 255, 136, 0.35),
+      0 0 0 0 rgba(0, 255, 136, 0.4),
+      inset 0 0 28px rgba(0, 255, 136, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(0, 255, 136, 0.85),
+      0 0 36px 2px rgba(0, 255, 136, 0.4),
+      inset 0 0 36px rgba(0, 255, 136, 0.1);
+  }
+}
+.mx-pulse { animation: mx-pulse 1.4s ease-in-out 2; }
+
+@keyframes mx-pulse-danger {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 48, 80, 0.55),
+      0 0 0 0 rgba(255, 48, 80, 0.4),
+      inset 0 0 28px rgba(255, 48, 80, 0.05);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 48, 80, 1),
+      0 0 40px 4px rgba(255, 48, 80, 0.45),
+      inset 0 0 36px rgba(255, 48, 80, 0.12);
+  }
+}
+.mx-pulse-danger { animation: mx-pulse-danger 1.2s ease-in-out 2; }
+
+@keyframes mx-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.mx-blink { animation: mx-blink 1.6s ease-in-out infinite; }
+
+@keyframes mx-flicker {
+  0%, 100% { opacity: 1; }
+  47%      { opacity: 1; }
+  48%      { opacity: 0.5; }
+  49%      { opacity: 1; }
+  72%      { opacity: 0.7; }
+  73%      { opacity: 1; }
+}
+.mx-flicker { animation: mx-flicker 8s linear infinite; }
+
+/* ------- Scrollbar ------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 136, 0.18);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 255, 136, 0.35); }
+
+/* ------- Focus rings ------- */
+:focus-visible {
+  outline: 2px solid var(--color-mx-green-400);
+  outline-offset: 2px;
 }

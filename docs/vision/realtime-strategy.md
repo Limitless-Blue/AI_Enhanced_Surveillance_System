@@ -12,24 +12,24 @@ Face recognition on video takes 200–500 ms per frame on CPU. It must never blo
 
 ## Architecture (As Built)
 
-```
-Browser (React) ←── Socket.IO ←── FastAPI ←── Redis SUB "detections"
-                                      │
-HTTP ───────────────────────────────► │ (enqueue tasks)
-                                      ▼
-                                   Redis broker
-                                      │
-                     ┌────────────────┼────────────────┐
-                     ▼                ▼                 ▼
-              stream_worker    analyze_video     analyze_image
-              (camera task)    (upload task)     (upload task)
-                     │
-                     │ redis.publish("detections", json)
-                     ▼
-               FastAPI coroutine (start_redis_listener)
-                     │
-                     ▼
-               sio.emit("detection", data)  →  all browser clients
+```mermaid
+flowchart TD
+    Browser["Browser (React)"]
+    FastAPI["FastAPI — socketio.ASGIApp"]
+    Redis[("Redis — broker + Pub/Sub 'detections'")]
+    SW["stream_worker (camera task)"]
+    AV["analyze_video (upload task)"]
+    AImg["analyze_image (upload task)"]
+    Listener["FastAPI coroutine — start_redis_listener"]
+
+    Browser -- "HTTP /api/*" --> FastAPI
+    FastAPI -- "enqueue tasks" --> Redis
+    Redis --> SW
+    Redis --> AV
+    Redis --> AImg
+    SW -- "redis.publish('detections', json)" --> Redis
+    Redis -. "SUB 'detections'" .-> Listener
+    Listener -- "sio.emit('detection')" --> Browser
 ```
 
 FastAPI and Socket.IO share one process via `socketio.ASGIApp`:
@@ -171,15 +171,17 @@ export function useDetectionSocket(onDetection: (data: LiveEvent) => void) {
 
 ## Media Upload Flow
 
-```
-POST /api/media/upload
-  ├─ saves file to uploads/raw/{job_id}.{ext}
-  ├─ inserts media_jobs doc (status: queued)
-  └─ enqueues analyze_image.delay() or analyze_video.delay()
-         │
-         └─ returns { job_id } immediately (< 100 ms)
+```mermaid
+flowchart TD
+    Up["POST /api/media/upload"]
+    Save["Save file → uploads/raw/{job_id}.{ext}"]
+    Job["Insert media_jobs doc (status: queued)"]
+    Enq["Enqueue analyze_image.delay() / analyze_video.delay()"]
+    Resp["Return { job_id } immediately (&lt; 100 ms)"]
+    Poll["GET /api/media/jobs → [{ id, status, processed_frames, detections_found }]"]
 
-GET /api/media/jobs  →  [{ id, status, processed_frames, detections_found }, ...]
+    Up --> Save --> Job --> Enq --> Resp
+    Resp -. "frontend polls every 2s while processing" .-> Poll
 ```
 
 ---

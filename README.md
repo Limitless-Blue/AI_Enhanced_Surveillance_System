@@ -1,68 +1,137 @@
-# AI-Enhanced Surveillance System
+# 🛡️ AI-Enhanced Surveillance System
 
-A production-ready, zero-cost AI surveillance platform with real-time face recognition, live RTSP stream processing, and multi-channel alert dispatch.
+<div align="center">
+  <img src="https://res.cloudinary.com/dwco7vfgp/image/upload/v1784465662/5_qiaduj.png" alt="Banner" />
+</div>
 
-## Stack
+> A production-ready, zero-cost AI surveillance platform with real-time face recognition, live RTSP stream processing, and multi-channel alert dispatch.
+
+<div align="center">
+
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+  [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+  [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![React](https://img.shields.io/badge/React-20232A?style=flat&logo=react&logoColor=61DAFB)](https://reactjs.org/)
+</div>
+
+---
+
+## 📖 Table of Contents
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Architecture](#-architecture)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [API Reference](#-api-reference)
+- [Alert Channels Setup](#-alert-channels-setup)
+- [Troubleshooting](#️-troubleshooting)
+
+---
+
+## ✨ Features
+
+<div align="center">
+  <img src="https://res.cloudinary.com/dwco7vfgp/image/upload/v1784478948/1_yp0ryd.png" alt="Dashboard Placeholder" />
+</div>
+
+### 🧑‍🤝‍🧑 Person Enrollment
+* **Intelligent Enrollment:** Enroll suspects, victims, or accused persons with a face photo.
+* **High Accuracy:** Add multiple images per person — embeddings are averaged for superior accuracy.
+* **Instant Search:** Quick image search to identify a person from any uploaded photo.
+
+### 📹 Live Camera Streams
+* **Universal Support:** Register RTSP cameras, IP cameras, or webcams (source `0`).
+* **Granular Control:** Start/stop streams from the UI — each stream runs as an isolated Celery task.
+* **Custom Configuration:** Per-camera settings for match threshold, frame skip, and GPS coordinates.
+* **Targeted Alerts:** Per-camera police station alert routing via Webhook, Telegram, and ntfy.
+
+### 🖼️ Media Analysis
+* **Offline Processing:** Upload images or videos for offline face matching.
+* **Background Jobs:** Video jobs run in the background with granular per-frame progress tracking.
+
+### 🚨 Detection & Alerting
+| Confidence Score | Threat Level | Automated Action |
+|:---:|:---:|---|
+| **≥ 0.60** | 🔴 **HIGH** | Auto-alert dispatched to all configured channels |
+| **0.45–0.59** | 🟡 **REVIEW** | Saved to Review Queue for operator confirmation |
+| **< 0.45** | ⚪ **LOW** | Not recorded |
+
+* **Multi-Channel:** Per-person & Per-camera routing to Telegram, Email, ntfy.sh, and Webhooks.
+* **Smart Throttling:** 60-second cooldown per person per camera to prevent alert spam.
+
+<div align="center">
+  <img src="https://res.cloudinary.com/dwco7vfgp/image/upload/v1784478948/2_akz8a9.png" alt="Alerts Placeholder" />
+</div>
+
+---
+
+## 🛠 Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Face Recognition | InsightFace `buffalo_l` — ArcFace R100 (99.77% LFW) |
-| Face Detection | RetinaFace (bundled in InsightFace) |
-| Multi-object Tracking | DeepSORT (`deep-sort-realtime`) |
-| Backend API | FastAPI + python-socketio (single ASGI process) |
-| Task Queue | Celery + Redis |
-| Database | MongoDB 7 — Motor (async) + pymongo (sync) |
-| Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
-| Real-time Events | Socket.IO over Redis Pub/Sub |
-| Alert Channels | Telegram Bot API, Gmail SMTP, ntfy.sh, HTTP Webhooks |
+| **Face Recognition** | InsightFace `buffalo_l` — ArcFace R100 (99.77% LFW) |
+| **Face Detection** | RetinaFace (bundled in InsightFace) |
+| **Multi-object Tracking** | DeepSORT (`deep-sort-realtime`) |
+| **Backend API** | FastAPI + python-socketio (single ASGI process) |
+| **Task Queue** | Celery + Redis |
+| **Database** | MongoDB 7 — Motor (async) + pymongo (sync) |
+| **Frontend** | React 18 + TypeScript + Vite + Tailwind CSS |
+| **Real-time Events** | Socket.IO over Redis Pub/Sub |
+| **Alert Channels** | Telegram Bot API, Gmail SMTP, ntfy.sh, HTTP Webhooks |
 
 ---
 
-## Prerequisites
+## 🏗 Architecture
 
-- **Docker Desktop** — provides Redis (and optionally MongoDB)
+```mermaid
+graph TD
+    Browser[Browser / React App]
+    FastAPI[FastAPI Backend]
+    Celery[Celery Workers]
+    Redis[Redis Pub/Sub & Broker]
+    Mongo[(MongoDB)]
+    InsightFace[InsightFace + DeepSORT]
+
+    Browser -- REST /api/* --> FastAPI
+    Browser <--> |WebSocket /socket.io| FastAPI
+    FastAPI <--> Redis
+    Celery <--> Redis
+    Celery --> InsightFace
+    FastAPI --> Mongo
+    Celery --> Mongo
+```
+
+**Key Design Decisions:**
+- `socketio.ASGIApp` wraps FastAPI — single process, single port 8000.
+- Workers publish detection events to Redis channel `"detections"`; a FastAPI background coroutine subscribes and re-emits via Socket.IO to all browser clients.
+- All enrolled embeddings are loaded into a `(N, 512)` numpy matrix at startup — matching is one `matmul` call, O(1) regardless of enrolled persons count.
+- DeepSORT tracks identities across frames and averages embeddings over a 5-frame buffer — reduces false positives from motion blur and partial occlusion.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Docker Desktop** (provides Redis & optionally MongoDB)
 - **Python 3.10+**
 - **Node.js 18+**
 
-> **Windows users**: if you have a native MongoDB service installed, read the [MongoDB setup section](#mongodb-setup-windows) below before proceeding.
+> ⚠️ **Windows users**: If you have a native MongoDB service installed, please read the [MongoDB setup section](#mongodb-setup-windows) before proceeding.
 
----
-
-## Quick Start
-
-### 1. Clone & configure
-
+### 1. Clone & Configure
 ```bash
-git clone <repo-url>
 cd AI-Enhanced-Surveillance
 cp backend/.env.example backend/.env
 ```
+Edit `backend/.env` with your desired configuration (Alert channels are optional).
 
-Edit `backend/.env`:
-
-```env
-MONGO_URI=mongodb://localhost:27017/
-MONGO_DB_NAME=AI_Enhanced_Service
-REDIS_URL=redis://localhost:6379/0
-
-# Alert channels (all optional — configure only what you use)
-TELEGRAM_BOT_TOKEN=
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=you@gmail.com
-SMTP_PASS=your_app_password
-SMTP_FROM=you@gmail.com
-NTFY_BASE_URL=https://ntfy.sh
-```
-
-### 2. Start infrastructure (Redis + MongoDB)
-
+### 2. Start Infrastructure
 ```bash
 docker compose up -d
 ```
 
-### 3. Backend
-
+### 3. Start Backend
 ```bash
 cd backend
 python -m venv .venv
@@ -75,182 +144,72 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
+> 💡 *Note: The first run downloads the InsightFace `buffalo_l` model (~180 MB).*
+> 🪟 *Windows users need [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) installed for InsightFace.*
 
-> First run downloads the InsightFace `buffalo_l` model (~180 MB) to `~/.insightface/`.
-
-> **Windows — Visual C++ Build Tools required** for InsightFace. Download from:
-> https://visualstudio.microsoft.com/visual-cpp-build-tools/
-
-### 4. Celery worker (second terminal)
-
+### 4. Start Celery Worker (In a new terminal)
 ```bash
 cd backend
 .venv\Scripts\activate   # or source .venv/bin/activate
 
-# Windows — must use threads pool (no fork()):
+# Windows (must use threads pool):
 celery -A app.tasks.celery_app worker --loglevel=info --pool=threads --concurrency=4
 
 # macOS/Linux:
 celery -A app.tasks.celery_app worker --loglevel=info
 ```
 
-### 5. Frontend
-
+### 5. Start Frontend (In a new terminal)
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-
-Open **http://localhost:5173**
-
----
-
-## MongoDB Setup (Windows)
-
-Windows often ships with a native MongoDB service that conflicts with the Docker container — both try to bind `localhost:27017`. The symptom is a `DatabaseDifferCase` error on startup.
-
-**Check if the native service is running:**
-
-```powershell
-Get-Service -Name "*mongo*"
-```
-
-**Option A — Use Docker MongoDB (recommended for this project)**
-
-Run in an **Administrator** PowerShell:
-
-```powershell
-Stop-Service MongoDB
-Set-Service MongoDB -StartupType Manual
-```
-
-Then start Docker containers normally:
-
-```bash
-docker compose up -d
-```
-
-**Option B — Keep using the native MongoDB**
-
-Stop the Docker MongoDB container so it doesn't conflict, keep Redis in Docker:
-
-```powershell
-docker compose stop mongo
-```
-
-Either way, if you see `DatabaseDifferCase` (`code 13297`), it means a database named `AI_Enhanced_service` (lowercase `s`) was created in a previous session. Drop it:
-
-```python
-# Run once from backend/ with .venv activated:
-python -c "from pymongo import MongoClient; MongoClient().drop_database('AI_Enhanced_service')"
-```
+Open [http://localhost:5173](http://localhost:5173) in your browser! 🎉
 
 ---
 
-## Features
+## 📡 API Reference
 
-### Person Enrollment
-- Enroll suspects, victims, or accused persons with a face photo
-- Add multiple images per person — embeddings are averaged for higher accuracy
-- Quick image search to identify a person from any uploaded photo
+Access interactive Swagger docs at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Live Camera Streams
-- Register RTSP cameras, IP cameras, or webcam (source `0`)
-- Start/stop streams from the UI — each stream runs as an isolated Celery task
-- Per-camera configuration: match threshold, frame skip, GPS coordinates
-- Per-camera police station alert routing: webhook + Telegram + ntfy
-
-### Media Analysis
-- Upload images or videos for offline face matching
-- Video jobs run in background with per-frame progress tracking
-
-### Detection & Alerting
-
-| Score | Level | Action |
-|---|---|---|
-| ≥ 0.60 | HIGH | Auto-alert dispatched to all configured channels |
-| 0.45–0.59 | REVIEW | Saved to Review Queue for operator confirmation |
-| < 0.45 | — | Not recorded |
-
-- Per-person channels: Telegram, Email, ntfy.sh
-- Per-camera police station channels: Webhook, Telegram, ntfy.sh
-- 60-second cooldown per person per camera (no alert spam)
-
-### Dashboard
-- Live detection feed via Socket.IO (zero polling)
-- Red toast notifications for HIGH-confidence matches
-- Stats: enrolled persons · detections today · high-confidence count
-
----
-
-## Architecture
-
-```
-Browser (React)
-    │  REST /api/*               WebSocket /socket.io
-    ▼                                    ▲
-FastAPI (uvicorn) ◄──── Redis Pub/Sub ────► Celery Workers
-    │                                            │
-    ▼                                            ▼
-MongoDB (Motor async)              InsightFace + DeepSORT
-                                   MongoDB (pymongo sync)
-```
-
-**Key design decisions:**
-- `socketio.ASGIApp` wraps FastAPI — single process, single port 8000
-- Workers publish detection events to Redis channel `"detections"`; a FastAPI background coroutine subscribes and re-emits via Socket.IO to all browser clients
-- All enrolled embeddings are loaded into a `(N, 512)` numpy matrix at startup — matching is one `matmul` call, O(1) regardless of enrolled persons count
-- DeepSORT tracks identities across frames and averages embeddings over a 5-frame buffer — reduces false positives from motion blur and partial occlusion
-- Windows Celery must use `--pool=threads` (no `fork()` on Windows)
-
----
-
-## API Reference
+<details>
+<summary>Click to expand basic API routes</summary>
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/health` | System health + enrolled person count |
 | GET | `/api/persons` | List enrolled persons |
-| POST | `/api/persons` | Enroll person (multipart: `name`, `category`, `image`) |
-| POST | `/api/persons/{id}/images` | Add enrollment image |
-| DELETE | `/api/persons/{id}` | Delete person + embeddings |
-| POST | `/api/persons/search` | Search by photo |
-| GET | `/api/cameras` | List cameras |
+| POST | `/api/persons` | Enroll person |
 | POST | `/api/cameras` | Register camera |
 | POST | `/api/cameras/{id}/start` | Start stream worker |
-| POST | `/api/cameras/{id}/stop` | Stop stream worker |
-| DELETE | `/api/cameras/{id}` | Delete camera |
-| POST | `/api/media/upload` | Upload image or video for analysis |
-| GET | `/api/media/jobs` | List media processing jobs |
-| GET | `/api/detections` | Detections (params: `limit`, `confidence`) |
-| GET | `/api/alerts` | Alert dispatch history |
+| POST | `/api/media/upload` | Upload media for analysis |
+| GET | `/api/detections` | Detections history |
 
-Interactive docs: **http://localhost:8000/docs**
+</details>
 
 ---
 
-## Free Alert Setup
+## 🔔 Alert Channels Setup
 
 ### Telegram
-1. Message `@BotFather` → `/newbot` → copy the token
-2. Start a DM with the bot or add it to a group, then fetch the chat ID:
-   `https://api.telegram.org/bot<TOKEN>/getUpdates`
-3. Set `TELEGRAM_BOT_TOKEN` in `.env`; enter the chat ID per-person or per-camera in the UI
+1. Message [@BotFather](https://t.me/botfather) → `/newbot` → copy the token.
+2. Start a DM with the bot, then fetch the chat ID: `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+3. Set `TELEGRAM_BOT_TOKEN` in `.env`.
 
 ### Gmail
-1. Enable 2-Step Verification on your Google account
-2. Google Account → Security → App Passwords → create one for "Mail"
-3. Use the 16-character app password as `SMTP_PASS`
+1. Enable 2-Step Verification on your Google account.
+2. Go to **Security → App Passwords** and create one for "Mail".
+3. Use the 16-character app password as `SMTP_PASS`.
 
 ### ntfy.sh
-1. No account needed — pick any unique topic name
-2. Subscribe at `https://ntfy.sh/<your-topic>` or the ntfy mobile app
-3. Enter the topic name per-person or per-camera in the UI
+1. No account needed — pick any unique topic name.
+2. Subscribe at `https://ntfy.sh/<your-topic>` or via the mobile app.
+3. Enter the topic name per-person or per-camera in the UI.
 
 ---
 
-## Environment Variables
+## ⚙️ Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
@@ -260,39 +219,62 @@ Interactive docs: **http://localhost:8000/docs**
 | `UPLOADS_DIR` | `uploads` | Directory for face crop snapshots |
 | `TELEGRAM_BOT_TOKEN` | — | From `@BotFather` |
 | `SMTP_HOST` | `smtp.gmail.com` | SMTP server |
-| `SMTP_PORT` | `587` | SMTP port (STARTTLS) |
-| `SMTP_USER` | — | SMTP login email |
-| `SMTP_PASS` | — | SMTP password / Gmail App Password |
 | `NTFY_BASE_URL` | `https://ntfy.sh` | ntfy server URL |
 
 ---
 
-## Troubleshooting
+## 🛠️ Troubleshooting
 
-**`DatabaseDifferCase` error on startup**
-A database with a different case (`AI_Enhanced_service`) already exists. Drop it:
+<details>
+<summary><b>DatabaseDifferCase error on startup</b></summary>
+A database with a different case (<code>AI_Enhanced_service</code>) already exists. Drop it:
+
 ```python
 python -c "from pymongo import MongoClient; MongoClient().drop_database('AI_Enhanced_service')"
 ```
+</details>
 
-**`Celery` not processing tasks on Windows**
-Must use `--pool=threads`. The default `prefork` pool requires `fork()` which is unavailable on Windows.
+<details>
+<summary><b>Celery not processing tasks on Windows</b></summary>
+Must use `--pool=threads`. The default prefork pool requires fork() which is unavailable on Windows.
+</details>
 
-**InsightFace install fails**
-Install Visual C++ Build Tools first: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+<details>
+<summary><b>InsightFace install fails</b></summary>
+Install Visual C++ Build Tools first: <a href="https://visualstudio.microsoft.com/visual-cpp-build-tools/">Visual Studio</a>
+</details>
 
-**`cv2` import error / missing .pyd**
-Conflicting OpenCV versions. Fix:
-```bash
-pip uninstall opencv-python opencv-python-headless -y
-pip install opencv-python==4.10.0.84
-```
+<details id="mongodb-setup-windows">
+<summary><b>Port 27017 conflict / Native MongoDB on Windows</b></summary>
+Windows often ships with a native MongoDB service that conflicts with the Docker container. 
+Check with: <code>Get-Service -Name "*mongo*"</code>
 
-**Port 27017 conflict**
-A native Windows MongoDB service holds the port. Either stop it (Admin PowerShell: `Stop-Service MongoDB`) or run `docker compose stop mongo` and use the native service.
+Either stop it in Admin PowerShell:
+<code>Stop-Service MongoDB</code>
+
+Or stop the Docker Mongo and use the native one:
+<code>docker compose stop mongo</code>
+</details>
 
 ---
 
-## License
 
-Apache License
+## 💖 Support
+
+Consider supporting by:
+
+<p align="center">
+  <a href="https://patreon.com/Chaitanya888"><img src="https://img.shields.io/badge/Patreon-FF424D?style=for-the-badge&logo=patreon&logoColor=white" alt="Patreon" /></a>
+  &nbsp;
+  <a href="https://buymeacoffee.com/chaitanya888"><img src="https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black" alt="Buy Me a Coffee" /></a>
+</p>
+
+<br/>
+
+---
+
+
+## 📜 License
+Distributed under the Apache-2.0 License. See [LICENSE](./LICENSE) for more information.
+
+---

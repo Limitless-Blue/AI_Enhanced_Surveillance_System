@@ -6,8 +6,8 @@
 
 | Choice | Reason |
 |---|---|
-| React 18 + Vite | Fast DX, component model maps cleanly to dashboard panels |
-| TailwindCSS | Polished dark UI with minimal custom CSS |
+| React 19 + Vite | Fast DX, component model maps cleanly to dashboard panels |
+| TailwindCSS v4 | Matrix-themed dark UI; CSS-first `@theme` tokens, custom utilities, liquid-glass chrome |
 | TanStack Query (React Query) | Server-state caching, auto-refetch for detection/alert feeds |
 | Socket.IO client | Real-time detection events pushed from backend — zero polling |
 | Axios | HTTP client with base URL + interceptors |
@@ -74,53 +74,34 @@ Both Redis and MongoDB run locally. No cloud subscription required.
 
 ## System Diagram
 
-```
-Browser (React)
-    │  REST /api/*               WebSocket /socket.io
-    ▼                                    ▲
-┌────────────────────────────────────────────┐
-│             FastAPI + Socket.IO            │
-│  (socketio.ASGIApp wraps FastAPI)          │
-│  /api/persons    /api/cameras              │
-│  /api/alerts     /api/detections           │
-│  /api/media      /health                   │
-│  Socket.IO server (async Redis subscriber) │
-└───────┬────────────────────────────────────┘
-        │ enqueue tasks (Redis broker)
-        ▼
-┌─────────────────────────┐
-│     Redis               │
-│  • Celery broker        │
-│  • Celery result backend│
-│  • Pub/Sub "detections" │
-└───────┬─────────────────┘
-        │
-┌───────┴────────────┐
-│  Celery Workers    │
-│  (--pool=threads   │  ← Windows-compatible
-│   on Windows)      │
-│                    │
-│  analyze_image     │  ← short-lived (< 1s)
-│  analyze_video     │  ← medium (seconds-minutes)
-│  stream_worker     │  ← long-running (indefinite)
-│                    │
-│  InsightFace       │
-│  DeepSORT          │
-│  OpenCV RTSP       │
-└───────┬────────────┘
-        │ publish match events
-        ▼
-    Redis "detections" channel
-        │
-        ▼ (FastAPI background coroutine subscribes)
-    Socket.IO → all connected browsers
-        │
-        ▼
-    Alert Dispatcher
-    • Telegram Bot (httpx → api.telegram.org)
-    • Gmail SMTP (smtplib stdlib)
-    • ntfy.sh (httpx POST)
-    • Webhook (httpx POST JSON)
+```mermaid
+flowchart TD
+    Browser["Browser — React 19 SPA"]
+
+    subgraph API["FastAPI + Socket.IO — socketio.ASGIApp, port 8000"]
+        Routes["/api/persons · /api/cameras · /api/media<br/>/api/detections · /api/alerts · /api/health"]
+        SIO["Socket.IO server<br/>(async Redis subscriber)"]
+    end
+
+    Redis[("Redis<br/>Celery broker · result backend · Pub/Sub 'detections'")]
+
+    subgraph Workers["Celery Workers — --pool=threads on Windows"]
+        AImg["analyze_image — short-lived (&lt; 1s)"]
+        AVid["analyze_video — medium (seconds–minutes)"]
+        Stream["stream_worker — long-running (indefinite)"]
+    end
+
+    AILibs["InsightFace · DeepSORT · OpenCV RTSP"]
+    Dispatch["Alert Dispatcher<br/>Telegram · Gmail SMTP · ntfy.sh · Webhook"]
+
+    Browser -- "REST /api/*" --> Routes
+    Routes -- "enqueue tasks" --> Redis
+    Redis -- "deliver tasks" --> Workers
+    Workers --> AILibs
+    Workers -- "publish match events" --> Redis
+    Redis -. "Pub/Sub 'detections'" .-> SIO
+    SIO -. "WebSocket /socket.io" .-> Browser
+    Workers --> Dispatch
 ```
 
 ---

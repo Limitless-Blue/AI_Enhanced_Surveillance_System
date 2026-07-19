@@ -9,6 +9,7 @@ import AlertLog from './pages/AlertLog'
 import ReviewQueue from './pages/ReviewQueue'
 
 const qc = new QueryClient({ defaultOptions: { queries: { staleTime: 5000 } } })
+if (import.meta.env.DEV) (window as any).__qc = qc
 
 export default function App() {
   return (

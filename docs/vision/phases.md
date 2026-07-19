@@ -23,6 +23,26 @@ Phase 12 ✅ Production Hardening
 
 ---
 
+## Post-Phase Refinements
+
+Work completed after the 12-phase plan, during demo preparation:
+
+- **UI redesign** — full "Matrix" dark theme (neon-green on near-black), Tailwind v4
+  `@theme` tokens, reusable `matrix/` component library, liquid-glass chrome
+  (top bar, logo tile, stat tiles, toasts, upload drop zone), radar-eye logo +
+  favicon, rebranded to **AI SURVEILLANCE**.
+- **AI correctness fixes** (see [ai-pipeline.md](ai-pipeline.md)):
+  - `FaceMatcher` now L2-normalizes every embedding on input. Previously raw
+    ArcFace vectors were treated as unit-length, inflating all scores ~500× and
+    making every face match as HIGH.
+  - `_handle_match` no longer dead-returns on a non-existent `match.person`
+    attribute — image/video/stream analysis now actually persists detections
+    and dispatches alerts.
+- **API consistency** — health endpoint moved from `/health` to `/api/health`
+  so it sits under the same prefix as every other route (and the frontend proxy).
+
+---
+
 ## Phase 1 ✅ — Project Foundation & Dev Environment
 
 **Goal:** Monorepo scaffolded, all tools installed, services running locally.
@@ -33,7 +53,7 @@ Phase 12 ✅ Production Hardening
 - `docker-compose.yml` — MongoDB 7 + Redis 7-alpine with health checks
 - `backend/.env.example` — all config keys documented
 - `.gitignore` — excludes uploads/, .insightface/, node_modules, .env
-- FastAPI `/health` endpoint returning system status
+- FastAPI `/api/health` endpoint returning system status
 
 ### Notes
 - Windows: native MongoDB service may conflict with Docker on port 27017.
